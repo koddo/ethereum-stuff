@@ -1,0 +1,53 @@
+## project name is set in the .env file
+
+version: '2'
+
+
+services:
+
+  geth-morden:
+    image: koddo/geth
+    volumes:
+      - geth-morden:/home/theuser/.ethereum-classic
+      - geth-dot-ethash:/home/theuser/.ethash
+    command: bin/geth --chain=morden --fast --cache=512   --rpc --rpc-addr '0.0.0.0' --rpc-port 8585
+            # was also --rpc-api "admin,debug,eth,miner,net,personal,shh,txpool,web3"
+    ports:
+      - "8585:8585"
+      - "30303:30303"
+    logging: &logging_anchor
+      options:
+        max-size: "100k"
+        max-file: "2"
+
+
+  emerald-rs:
+    image: koddo/rust
+    volumes:
+      - ../emerald-rs:/home/theuser/emerald-rs
+    working_dir: /home/theuser/emerald-rs
+    command: /home/theuser/emerald-rs/target/debug/emerald server --host '0.0.0.0' --port 1920
+    ports:
+      - "1920:1920"
+
+  # emerald-wallet:
+  #   image: koddo/node          # TODO: theuser
+  #   user: node
+  #   working_dir: /home/node/emerald-wallet
+  #   volumes:
+  #     - ../emerald-wallet:/home/node/emerald-wallet
+  #     - npm-asdf:/home/node/.npm
+  #   ports:
+  #     - "8000:8000"
+  #   command: npm run start:web
+    
+  
+volumes:
+  # geth-dot-ethereum-classic:
+  geth-morden:
+    external: true
+  geth-dot-ethash:
+    external: false
+  # npm-asdf:
+  #   external: false
+        

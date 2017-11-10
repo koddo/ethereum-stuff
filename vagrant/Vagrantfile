@@ -1,0 +1,32 @@
+require 'yaml'
+yaml = YAML.load_file(File.join(File.dirname(__FILE__), 'vagrant.yaml'))    # http://blog.scottlowe.org/2016/01/14/improved-way-yaml-vagrant/
+
+
+Vagrant.configure("2") do |config|
+
+  config.vm.box = "debian/contrib-jessie64"   # this box has everything for shared folders and nfs preinstalled
+
+  config.vm.provision "ansible" do |ansible|
+    ansible.verbose = "v"
+    ansible.playbook = "vagrant/playbook.yml"
+  end
+
+  # on mac, without bindfs it mounts everything with wrong uid:gid = 501:dialout
+  # the bindfs plugin uses fuse, which adds some considerable overhead; would be better to not use it when possible, but I'm on mac, so here it is
+  config.vm.network "private_network", type: "dhcp"
+  config.vm.synced_folder ".", "/vagrant", disabled: true
+  config.vm.synced_folder yaml['shared_dir'], "/vagrant-wrong-uid", type: "nfs"
+  config.bindfs.bind_folder    "/vagrant-wrong-uid", "/vagrant",
+                               create_as_user: true
+  # after: :provision
+  # perms: 'u=rwX:g=rD:o=rD'   # http://bindfs.org/docs/bindfs.1.html#sect12
+  
+
+  config.vm.provider "virtualbox" do |vb|
+    vb.gui = true
+    vb.cpus = 1
+    vb.memory = 1024
+    # vb.customize ["modifyvm", :id, "--cpuexecutioncap", "50"]     # I'm trying this out, feel free to get rid of this line
+  end
+
+end

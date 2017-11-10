@@ -1,0 +1,89 @@
+---
+- hosts: all
+  tasks:
+    # - name: install deps for vagrant-bindfs plugin
+    #   become: yes
+    #   apt:
+    #     update_cache: true
+    #     cache_valid_time: 3600
+    #     state: latest
+    #     name:
+    #       - fuse
+    #       - bindfs
+
+    - name: add contrib repo for virtualbox utils
+      become: yes
+      apt_repository:
+        repo: deb  http://deb.debian.org/debian jessie main contrib non-free
+
+    - name: install minimal lxde and virtualbox utils 
+      become: yes
+      apt:
+        update_cache: true
+        cache_valid_time: 3600
+        state: latest
+        name:
+          - xinit
+          - lxde-core
+          - lxterminal
+          - virtualbox-guest-dkms
+          - virtualbox-guest-utils
+          - virtualbox-guest-x11
+
+    - name: install lxdm for autologin to lxde on boot 
+      become: yes
+      apt:
+        update_cache: true
+        cache_valid_time: 3600
+        state: latest
+        name:
+          - lightdm
+      notify:
+        - reboot
+
+    - name: add a config line for autologin
+      become: yes
+      lineinfile:
+        path: "/etc/lightdm/lightdm.conf"
+        regexp: "#autologin-user="
+        line:   "autologin-user=vagrant"
+
+    
+    - name: add a config line to allow anybody run X
+      become: yes
+      lineinfile:
+        path: "/etc/X11/Xwrapper.config"
+        regexp: "allowed_users=.*$"
+        line:   "allowed_users=anybody"
+
+    - name: comment out a config line that starts screensaver
+      become: true
+      lineinfile:
+        backrefs: yes
+        # create: yes
+        # path: "~/.config/lxsession/LXDE/autostart"
+        path: "/etc/xdg/lxsession/LXDE/autostart"
+        regexp: "^(@xscreensaver.*)"
+        line:   "# \\1"
+
+    - name: in config add lines to disable screen going blank; make it open a terminal window on boot
+      become: true
+      blockinfile:
+        # path: "~/.config/lxsession/LXDE/autostart"
+        path: "/etc/xdg/lxsession/LXDE/autostart"
+        # create: yes
+        block: |
+          @xset s noblank
+          @xset s off
+          @xset -dpms
+          @xset s 0 0
+          lxterminal
+
+          
+      
+  handlers:
+    - name: reboot
+      become: yes
+      shell: sleep 2 && /sbin/shutdown -r now
+      async: 1
+      poll: 0

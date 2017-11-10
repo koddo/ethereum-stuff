@@ -1,0 +1,26 @@
+FROM debian
+
+RUN apt-get update && apt-get install -y \
+            curl \
+            build-essential \
+            libssl-dev \
+            pkg-config \
+            && \
+    apt-get -y autoclean && apt-get -y autoremove
+
+
+# at the moment of writing the docker volumes' owner uid is 1000 and can't be changed
+# this was a long time ago, so check if still true
+RUN groupadd theuser && useradd --create-home --gid theuser --uid 1000 theuser
+WORKDIR /home/theuser
+# erl needs this to check ~/.erlang:
+ENV HOME /home/theuser
+ENV USER theuser
+USER theuser
+
+
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+# -y here means use defaults: add the path variable, use stable toolchain, x86_64 architecture
+# TODO: use standalone installer, https://www.rust-lang.org/en-US/other-installers.html
+
+ENV PATH="$HOME/.cargo/bin:$PATH"
